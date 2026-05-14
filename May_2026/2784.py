@@ -8,17 +8,24 @@
 
 class Solution:
     def isGood(self, nums: List[int]) -> bool:
-        n = len(nums) - 1
-        count = [0] * (n + 1)
+        # n = len(nums) - 1
+        # count = [0] * (n + 1)
 
-        for num in nums:
-            if num > n:
+        # for num in nums:
+        #     if num > n:
+        #         return False
+        #     count[num] += 1
+
+        # for i in range(1, n):
+        #     if count[i] != 1:
+        #         return False
+
+        # return count[n] == 2
+        N = len(nums)
+        nums.sort()
+
+
+        for i in range(N-1):
+            if nums[i] + 1 != nums[i+1]:
                 return False
-            count[num] += 1
-
-        for i in range(1, n):
-            if count[i] != 1:
-                return False
-
-        return count[n] == 2
-    
+        return nums[-1] == N-1
