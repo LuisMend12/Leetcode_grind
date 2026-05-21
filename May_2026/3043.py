@@ -21,25 +21,20 @@
 
 
 
-from narwhals import List
-
-
 class Solution:
-    def longestCommonPrefix(self, arr1: List[int], arr2: List[int]) -> int:
+    def longestCommonPrefix(self, arr1: list[int], arr2: list[int]) -> int:
+        prefixes = set()
+
+        for num in arr1:
+            s = str(num)
+            for i in range(1, len(s) + 1):
+                prefixes.add(s[:i])
+
         max_length = 0
-
-        for num1 in arr1:
-            for num2 in arr2:
-                str_num1 = str(num1)
-                str_num2 = str(num2)
-                common_length = 0
-
-                for digit1, digit2 in zip(str_num1, str_num2):
-                    if digit1 == digit2:
-                        common_length += 1
-                    else:
-                        break
-
-                max_length = max(max_length, common_length)
+        for num in arr2:
+            s = str(num)
+            for i in range(1, len(s) + 1):
+                if s[:i] in prefixes:
+                    max_length = max(max_length, i)
 
         return max_length
