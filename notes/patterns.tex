@@ -1,0 +1,602 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codecomment}{RGB}{110,110,110}
+\definecolor{codekeyword}{RGB}{0,0,150}
+
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    commentstyle=\color{codecomment}\itshape,
+    keywordstyle=\color{codekeyword}\bfseries,
+    language=Python,
+    breaklines=true,
+    frame=single,
+    tabsize=4,
+    showstringspaces=false,
+    xleftmargin=1em,
+    xrightmargin=1em
+}
+
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\newcommand{\complexity}[2]{\textbf{Time:} #1 \quad \textbf{Space:} #2}
+
+\title{LeetCode Patterns Cheat Sheet}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Sliding Window}
+
+Used for contiguous subarray/substring problems where a window expands and
+contracts over the input while maintaining some invariant (sum, count,
+distinct characters, etc.).
+
+\subsection{Fixed-size window}
+\complexity{$O(n)$}{$O(1)$ or $O(k)$}
+
+\begin{lstlisting}
+def max_sum_fixed_window(nums, k):
+    window_sum = sum(nums[:k])
+    best = window_sum
+    for i in range(k, len(nums)):
+        window_sum += nums[i] - nums[i - k]
+        best = max(best, window_sum)
+    return best
+\end{lstlisting}
+
+\subsection{Variable-size window (two pointers, same direction)}
+\complexity{$O(n)$}{$O(1)$ or $O(\Sigma)$ for a character/count map}
+
+\begin{lstlisting}
+def smallest_subarray_with_sum_at_least(nums, target):
+    left = 0
+    total = 0
+    best = float('inf')
+    for right, val in enumerate(nums):
+        total += val
+        while total >= target:
+            best = min(best, right - left + 1)
+            total -= nums[left]
+            left += 1
+    return best if best != float('inf') else 0
+\end{lstlisting}
+
+\textbf{Recognize it when:} you need the longest/shortest/count of
+contiguous subarrays or substrings satisfying a condition, and elements can
+be added/removed incrementally.
+
+\textbf{Classic problems:} Longest Substring Without Repeating Characters
+(3), Minimum Window Substring (76), Longest Repeating Character
+Replacement (424), Permutation in String (567), Max Consecutive Ones III
+(1004), Fruit Into Baskets (904), Subarrays with K Different Integers
+(992).
+
+\section{Two Pointers}
+
+Two indices moving through a (usually sorted) structure, either converging
+from both ends or moving in the same direction at different speeds.
+
+\subsection{Opposite ends (sorted array)}
+\complexity{$O(n)$}{$O(1)$}
+
+\begin{lstlisting}
+def two_sum_sorted(nums, target):
+    left, right = 0, len(nums) - 1
+    while left < right:
+        s = nums[left] + nums[right]
+        if s == target:
+            return [left, right]
+        elif s < target:
+            left += 1
+        else:
+            right -= 1
+    return [-1, -1]
+\end{lstlisting}
+
+\textbf{Classic problems:} Two Sum II (167), 3Sum (15), Container With
+Most Water (11), Trapping Rain Water (42), Valid Palindrome (125), Sort
+Colors / Dutch National Flag (75).
+
+\section{Fast \& Slow Pointers (Floyd's Cycle Detection)}
+
+One pointer moves twice as fast as the other; useful for linked lists and
+detecting cycles or finding midpoints.
+
+\complexity{$O(n)$}{$O(1)$}
+
+\begin{lstlisting}
+def has_cycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            return True
+    return False
+\end{lstlisting}
+
+\textbf{Classic problems:} Linked List Cycle (141), Linked List Cycle II
+(142), Middle of the Linked List (876), Happy Number (202), Find the
+Duplicate Number (287).
+
+\section{Prefix Sum \& Difference Arrays}
+
+Precompute cumulative sums so range-sum queries become $O(1)$; a hash map
+of prefix sums turns "subarray sum equals k" problems into lookups.
+
+\complexity{$O(n)$ preprocessing, $O(1)$ per query}{$O(n)$}
+
+\begin{lstlisting}
+def subarray_sum_equals_k(nums, k):
+    count = 0
+    running = 0
+    seen = {0: 1}
+    for num in nums:
+        running += num
+        count += seen.get(running - k, 0)
+        seen[running] = seen.get(running, 0) + 1
+    return count
+\end{lstlisting}
+
+\textbf{Classic problems:} Subarray Sum Equals K (560), Range Sum Query -
+Immutable (303), Product of Array Except Self (238), Continuous Subarray
+Sum (523), Corporate Flight Bookings (1109, difference array).
+
+\section{Binary Search}
+
+Not just for sorted arrays -- also for "search on the answer" when the
+answer space is monotonic (a feasibility check that flips from false to
+true).
+
+\subsection{Standard binary search}
+\complexity{$O(\log n)$}{$O(1)$}
+
+\begin{lstlisting}
+def binary_search(nums, target):
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+\end{lstlisting}
+
+\subsection{Binary search on the answer}
+\complexity{$O(n \log(\text{range}))$}{$O(1)$}
+
+\begin{lstlisting}
+def min_capacity(weights, days):
+    def feasible(capacity):
+        needed_days, load = 1, 0
+        for w in weights:
+            if load + w > capacity:
+                needed_days += 1
+                load = 0
+            load += w
+        return needed_days <= days
+
+    lo, hi = max(weights), sum(weights)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if feasible(mid):
+            hi = mid
+        else:
+            lo = mid + 1
+    return lo
+\end{lstlisting}
+
+\textbf{Recognize it when:} the problem asks for a minimum/maximum value
+that satisfies some monotonic "is this good enough?" predicate.
+
+\textbf{Classic problems:} Search in Rotated Sorted Array (33), Koko
+Eating Bananas (875), Capacity To Ship Packages Within D Days (1011),
+Split Array Largest Sum (410), Median of Two Sorted Arrays (4).
+
+\section{BFS / DFS on Graphs and Trees}
+
+Traversal patterns for exploring reachability, shortest paths (unweighted),
+connected components, and tree structure.
+
+\subsection{BFS (shortest path, level order)}
+\complexity{$O(V + E)$}{$O(V)$}
+
+\begin{lstlisting}
+from collections import deque
+
+def bfs_shortest_path(graph, start, target):
+    queue = deque([(start, 0)])
+    visited = {start}
+    while queue:
+        node, dist = queue.popleft()
+        if node == target:
+            return dist
+        for nxt in graph[node]:
+            if nxt not in visited:
+                visited.add(nxt)
+                queue.append((nxt, dist + 1))
+    return -1
+\end{lstlisting}
+
+\subsection{DFS (connected components, backtracking traversal)}
+\complexity{$O(V + E)$}{$O(V)$ recursion stack}
+
+\begin{lstlisting}
+def dfs(graph, node, visited):
+    visited.add(node)
+    for nxt in graph[node]:
+        if nxt not in visited:
+            dfs(graph, nxt, visited)
+\end{lstlisting}
+
+\textbf{Classic problems:} Number of Islands (200), Rotting Oranges (994),
+Word Ladder (127), Clone Graph (133), Course Schedule (207, also
+topological sort), Pacific Atlantic Water Flow (417).
+
+\section{Topological Sort}
+
+Ordering of nodes in a DAG so that every directed edge $u \to v$ has $u$
+before $v$. Implemented via Kahn's algorithm (BFS with in-degrees) or DFS
+with a post-order stack.
+
+\complexity{$O(V + E)$}{$O(V + E)$}
+
+\begin{lstlisting}
+from collections import deque
+
+def topo_sort(num_nodes, edges):
+    graph = [[] for _ in range(num_nodes)]
+    indegree = [0] * num_nodes
+    for u, v in edges:
+        graph[u].append(v)
+        indegree[v] += 1
+
+    queue = deque(i for i in range(num_nodes) if indegree[i] == 0)
+    order = []
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for nxt in graph[node]:
+            indegree[nxt] -= 1
+            if indegree[nxt] == 0:
+                queue.append(nxt)
+    return order if len(order) == num_nodes else []  # empty => cycle
+\end{lstlisting}
+
+\textbf{Classic problems:} Course Schedule (207), Course Schedule II
+(210), Alien Dictionary (269), Minimum Height Trees (310).
+
+\section{Backtracking}
+
+Explore a decision tree, trying candidates and undoing (\emph{backtracking})
+when a partial solution can't lead to a valid one. Used for
+permutations/combinations, constraint satisfaction, and exhaustive search
+with pruning.
+
+\complexity{Exponential in general, pruning reduces it in practice}{$O(\text{depth})$}
+
+\begin{lstlisting}
+def subsets(nums):
+    result = []
+    path = []
+
+    def backtrack(start):
+        result.append(path[:])
+        for i in range(start, len(nums)):
+            path.append(nums[i])
+            backtrack(i + 1)
+            path.pop()
+
+    backtrack(0)
+    return result
+\end{lstlisting}
+
+\textbf{Classic problems:} Subsets (78), Permutations (46), Combination
+Sum (39), N-Queens (51), Word Search (79), Palindrome Partitioning (131).
+
+\section{Dynamic Programming}
+
+Break a problem into overlapping subproblems with optimal substructure;
+cache results (memoization or bottom-up table) to avoid recomputation.
+
+\subsection{1D DP}
+\complexity{$O(n)$}{$O(n)$, often reducible to $O(1)$}
+
+\begin{lstlisting}
+def house_robber(nums):
+    prev, curr = 0, 0
+    for num in nums:
+        prev, curr = curr, max(curr, prev + num)
+    return curr
+\end{lstlisting}
+
+\subsection{2D DP (grid / two sequences)}
+\complexity{$O(mn)$}{$O(mn)$, often reducible to $O(n)$}
+
+\begin{lstlisting}
+def longest_common_subsequence(text1, text2):
+    m, n = len(text1), len(text2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i - 1] == text2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    return dp[m][n]
+\end{lstlisting}
+
+\subsection{Knapsack (0/1 and unbounded)}
+
+\begin{lstlisting}
+def knapsack_01(weights, values, capacity):
+    dp = [0] * (capacity + 1)
+    for w, v in zip(weights, values):
+        for cap in range(capacity, w - 1, -1):  # reverse => each item once
+            dp[cap] = max(dp[cap], dp[cap - w] + v)
+    return dp[capacity]
+\end{lstlisting}
+
+\textbf{Recognize it when:} you're asked for a min/max/count over choices
+with recursive structure, and brute force overlaps subproblems (Fibonacci
+style, or "choose to include/exclude").
+
+\textbf{Classic problems:} Climbing Stairs (70), House Robber (198),
+Coin Change (322), Longest Increasing Subsequence (300), Edit Distance
+(72), Partition Equal Subset Sum (416), Longest Common Subsequence (1143).
+
+\section{Greedy}
+
+Make the locally optimal choice at each step, provable to yield a globally
+optimal result (usually via an exchange argument or matroid structure).
+Often paired with sorting.
+
+\complexity{$O(n \log n)$ (dominated by sort)}{$O(1)$ or $O(n)$}
+
+\begin{lstlisting}
+def can_attend_all_meetings(intervals):
+    intervals.sort(key=lambda x: x[0])
+    for i in range(1, len(intervals)):
+        if intervals[i][0] < intervals[i - 1][1]:
+            return False
+    return True
+\end{lstlisting}
+
+\textbf{Classic problems:} Jump Game (55), Gas Station (134), Task
+Scheduler (621), Non-overlapping Intervals (435), Minimum Number of
+Arrows to Burst Balloons (452).
+
+\section{Merge Intervals}
+
+Sort intervals by start time, then merge or compare adjacent ones. A
+specialization of the greedy pattern that shows up often enough to deserve
+its own bucket.
+
+\complexity{$O(n \log n)$}{$O(n)$}
+
+\begin{lstlisting}
+def merge_intervals(intervals):
+    intervals.sort(key=lambda x: x[0])
+    merged = [intervals[0]]
+    for start, end in intervals[1:]:
+        if start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return merged
+\end{lstlisting}
+
+\textbf{Classic problems:} Merge Intervals (56), Insert Interval (57),
+Meeting Rooms II (253), Interval List Intersections (986).
+
+\section{Monotonic Stack}
+
+Maintain a stack that is always increasing or decreasing; used to find the
+next/previous greater or smaller element in $O(n)$ instead of $O(n^2)$.
+
+\complexity{$O(n)$}{$O(n)$}
+
+\begin{lstlisting}
+def daily_temperatures(temps):
+    answer = [0] * len(temps)
+    stack = []  # indices, temps decreasing
+    for i, t in enumerate(temps):
+        while stack and temps[stack[-1]] < t:
+            j = stack.pop()
+            answer[j] = i - j
+        stack.append(i)
+    return answer
+\end{lstlisting}
+
+\textbf{Classic problems:} Daily Temperatures (739), Next Greater Element
+I/II (496, 503), Largest Rectangle in Histogram (84), Trapping Rain Water
+(42, stack variant), Remove K Digits (402).
+
+\section{Monotonic Deque (Sliding Window Maximum)}
+
+Combine sliding window with a monotonic deque to get window max/min in
+amortized $O(1)$ per step.
+
+\complexity{$O(n)$}{$O(k)$}
+
+\begin{lstlisting}
+from collections import deque
+
+def sliding_window_maximum(nums, k):
+    dq = deque()  # indices, values decreasing
+    result = []
+    for i, num in enumerate(nums):
+        while dq and nums[dq[-1]] < num:
+            dq.pop()
+        dq.append(i)
+        if dq[0] <= i - k:
+            dq.popleft()
+        if i >= k - 1:
+            result.append(nums[dq[0]])
+    return result
+\end{lstlisting}
+
+\textbf{Classic problems:} Sliding Window Maximum (239), Shortest
+Subarray with Sum at Least K (862).
+
+\section{Heap / Top-K Elements}
+
+A (min/max) heap keeps the $k$ best or worst elements seen so far without
+sorting everything, and merges multiple sorted structures efficiently.
+
+\complexity{$O(n \log k)$}{$O(k)$}
+
+\begin{lstlisting}
+import heapq
+
+def top_k_frequent(nums, k):
+    counts = {}
+    for n in nums:
+        counts[n] = counts.get(n, 0) + 1
+    heap = []
+    for num, freq in counts.items():
+        heapq.heappush(heap, (freq, num))
+        if len(heap) > k:
+            heapq.heappop(heap)
+    return [num for freq, num in heap]
+\end{lstlisting}
+
+\textbf{Classic problems:} Kth Largest Element in an Array (215), Top K
+Frequent Elements (347), Merge k Sorted Lists (23), Find Median from Data
+Stream (295), Task Scheduler (621).
+
+\section{Union-Find (Disjoint Set)}
+
+Track connected components under union operations, with path compression
+and union by rank/size for near-$O(1)$ amortized operations.
+
+\complexity{$O(\alpha(n))$ per operation}{$O(n)$}
+
+\begin{lstlisting}
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if self.rank[ra] < self.rank[rb]:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        if self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += 1
+        return True
+\end{lstlisting}
+
+\textbf{Classic problems:} Number of Connected Components (323), Redundant
+Connection (684), Accounts Merge (721), Number of Islands II (305).
+
+\section{Trie (Prefix Tree)}
+
+Tree structure for storing strings by shared prefixes, enabling fast
+prefix lookups and autocomplete-style queries.
+
+\complexity{$O(L)$ per insert/search, $L$ = word length}{$O(\Sigma \cdot N \cdot L)$}
+
+\begin{lstlisting}
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_word = False
+
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, word):
+        node = self.root
+        for ch in word:
+            node = node.children.setdefault(ch, TrieNode())
+        node.is_word = True
+
+    def search(self, word):
+        node = self.root
+        for ch in word:
+            if ch not in node.children:
+                return False
+            node = node.children[ch]
+        return node.is_word
+\end{lstlisting}
+
+\textbf{Classic problems:} Implement Trie (208), Word Search II (212),
+Design Add and Search Words Data Structure (211), Replace Words (648).
+
+\section{Bit Manipulation}
+
+XOR/AND/OR tricks for finding unique elements, counting bits, and
+subset/state compression (bitmask DP).
+
+\begin{lstlisting}
+def single_number(nums):
+    result = 0
+    for n in nums:
+        result ^= n
+    return result
+
+def count_bits(n):
+    return bin(n).count('1')
+\end{lstlisting}
+
+\textbf{Classic problems:} Single Number (136), Counting Bits (338),
+Number of 1 Bits (191), Sum of Two Integers (371), Subsets via bitmask
+(78 revisited).
+
+\section{Choosing a Pattern -- Quick Reference}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Contiguous subarray/substring, expand \& contract:}
+        Sliding Window.
+    \item \textbf{Sorted array, pair/triplet sums:} Two Pointers.
+    \item \textbf{Linked list cycle or midpoint:} Fast \& Slow Pointers.
+    \item \textbf{Range sum queries, "subarray sums to k":} Prefix Sum.
+    \item \textbf{Sorted search space, or "minimize/maximize feasible
+        value":} Binary Search (possibly on the answer).
+    \item \textbf{Grid/graph reachability, shortest path unweighted:}
+        BFS/DFS.
+    \item \textbf{Ordering with dependencies:} Topological Sort.
+    \item \textbf{All combinations/permutations, constraint search:}
+        Backtracking.
+    \item \textbf{Optimal value with overlapping subproblems:} Dynamic
+        Programming.
+    \item \textbf{Sort then make locally optimal choice:} Greedy /
+        Merge Intervals.
+    \item \textbf{Next greater/smaller element:} Monotonic Stack.
+    \item \textbf{Window max/min:} Monotonic Deque.
+    \item \textbf{Kth largest/smallest, frequency ranking:} Heap.
+    \item \textbf{Group connectivity, cycle detection in undirected
+        graph:} Union-Find.
+    \item \textbf{Prefix-based string lookups:} Trie.
+    \item \textbf{Uniqueness, subset enumeration, small state space:}
+        Bit Manipulation.
+\end{itemize}
+
+\end{document}
